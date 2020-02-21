@@ -15,24 +15,24 @@ void compute_transition(const bool *const current, bool *const next) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    for (int y = index; y < H; y += stride) {
-        for (int x = 0; x < W; ++x) {
-            int i = y * W + x;
-            int n = 0;
-            for (int yd = -1; yd <= 1; yd++) {
-                int y_ = (y + H + yd) % H;
-                for (int xd = -1; xd <= 1; xd++) {
-                    if (yd == 0 && xd == 0) continue;
-                    int x_ = (x + W + xd) % W;
-                    n += current[y_ * W + x_];
-                }
-            }
+    for (int i = index; i < W*H; i += stride) {
+        int x = i % W;
+        int y = i / W;
 
-            if (current[i]) {
-                next[i] = (n == 2 || n == 3);
-            } else {
-                next[i] = (n == 3);
+        int n = 0;
+        for (int yd = -1; yd <= 1; yd++) {
+            int y_ = (y + H + yd) % H;
+            for (int xd = -1; xd <= 1; xd++) {
+                if (yd == 0 && xd == 0) continue;
+                int x_ = (x + W + xd) % W;
+                n += current[y_ * W + x_];
             }
+        }
+
+        if (current[i]) {
+            next[i] = (n == 2 || n == 3);
+        } else {
+            next[i] = (n == 3);
         }
     }
 }
@@ -53,11 +53,11 @@ int main() {
     cudaMallocManaged(&next, sizeof(bool) * W * H);
 
     for (int i = 0; i < W*H; ++i)
-        current[i] = rand() % 2;
+        current[i] = rand() % 2;    
 
     auto start_time = chrono::high_resolution_clock::now();
 
-    int blockSize = 256;
+    int blockSize = 128;
     int nBlocks = (W*H + blockSize - 1) / blockSize;
 
     for (int i = 0; i < 100; ++i) {
