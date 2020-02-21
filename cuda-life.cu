@@ -12,7 +12,10 @@ const int H = 1000;
 
 __global__
 void compute_transition(const bool *const current, bool *const next) { 
-    for (int y = 0; y < H; ++y) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int y = index; y < H; y += stride) {
         for (int x = 0; x < W; ++x) {
             int i = y * W + x;
             int n = 0;
@@ -54,8 +57,11 @@ int main() {
 
     auto start_time = chrono::high_resolution_clock::now();
 
-    for (int i = 0; i < 1; ++i) {
-        compute_transition<<<1, 1>>>(current, next);
+    int blockSize = 256;
+    int nBlocks = (W*H + blockSize - 1) / blockSize;
+
+    for (int i = 0; i < 100; ++i) {
+        compute_transition<<<nBlocks, blockSize>>>(current, next);
         swap(current, next);
     }
 
